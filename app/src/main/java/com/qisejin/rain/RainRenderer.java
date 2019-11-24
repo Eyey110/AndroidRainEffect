@@ -25,7 +25,6 @@ import javax.microedition.khronos.opengles.GL10;
  */
 public class RainRenderer implements GLSurfaceView.Renderer {
 
-
     private int minR = 40;
     private int maxR = 80;
     private int maxDrops = 900;
@@ -80,20 +79,18 @@ public class RainRenderer implements GLSurfaceView.Renderer {
     private int mUniformTextureId;
     private float mScale = 1.0f;
 
-    private ArrayList<RainDrops.Drop> drops = new ArrayList<>();
-    private ArrayList<RainDrops.Drop> dropletsArray = new ArrayList<>();
-    private ArrayList<RainDrops.Drop> trailDrops = new ArrayList<>();
+    private ArrayList<Drop> drops = new ArrayList<>();
+    private ArrayList<Drop> dropletsArray = new ArrayList<>();
+    private ArrayList<Drop> trailDrops = new ArrayList<>();
 
     private void updateDroplets(float timeScale) {
-        dropletsCounter = dropletsCounter + (int) (dropletsRate * timeScale * getAreaMultiplier());
         int times = dropletsCounter;
         if (dropletsArray.size() < maxDropletsCount) {
             int count = Math.min(times, maxDropletsCount - dropletsArray.size());
             for (int i = 0; i < count; i++) {
-                dropletsCounter--;
                 int x = random((int) (surfaceWidth * mScale));
                 int y = random((int) (surfaceHeight * mScale));
-                RainDrops.Drop drop = new RainDrops.Drop();
+                Drop drop = new Drop();
                 drop.x = x;
                 drop.y = y;
                 drop.r = randomSqure(5, 10);
@@ -106,16 +103,16 @@ public class RainRenderer implements GLSurfaceView.Renderer {
     private void addBuffer() {
 //        Log.e("zhengliao", "size = " + dropletsArray.size());
         Log.e("zhengliao", "drop size = " + drops.size());
-        for (RainDrops.Drop drop : dropletsArray) {
+        for (Drop drop : dropletsArray) {
             initScaleAndBlue(drop);
         }
-        for (RainDrops.Drop drop : drops) {
+        for (Drop drop : drops) {
             initScaleAndBlue(drop);
         }
 
     }
 
-    private void initScaleAndBlue(RainDrops.Drop drop) {
+    private void initScaleAndBlue(Drop drop) {
         float x = drop.x;
         float y = drop.y;
         float r = drop.r;
@@ -393,7 +390,7 @@ public class RainRenderer implements GLSurfaceView.Renderer {
         updateRain(timeScale);
         Collections.sort(drops);
         for (int i = 0; i < drops.size(); i++) {
-            RainDrops.Drop drop = drops.get(i);
+            Drop drop = drops.get(i);
             if (!drop.killed) {
                 // update gravity
                 // (chance of drops "creeping down")
@@ -414,7 +411,7 @@ public class RainRenderer implements GLSurfaceView.Renderer {
                     drop.lastSpawn += drop.momentum * timeScale * trailRate;
                     if (drop.lastSpawn > drop.nextSpawn) {
                         if (canCreateDrop()) {
-                            RainDrops.Drop trailDrop = new RainDrops.Drop();
+                            Drop trailDrop = new Drop();
                             trailDrop.x = drop.x + (int) (random(-drop.r, drop.r) * 0.1f);
                             trailDrop.y = drop.y - (int) (drop.r * 0.01f);
                             trailDrop.r = (int) (drop.r * random(trailScaleRange[0], trailScaleRange[1]));
@@ -456,8 +453,8 @@ public class RainRenderer implements GLSurfaceView.Renderer {
                     int end = i + 70;
                     if (end > size)
                         end = size;
-                    ArrayList<RainDrops.Drop> slice = new ArrayList<>(drops.subList(start, end));
-                    for (RainDrops.Drop drop2 : slice) {
+                    ArrayList<Drop> slice = new ArrayList<>(drops.subList(start, end));
+                    for (Drop drop2 : slice) {
                         if (drop != drop2 &&
                                 drop.r > drop2.r &&
                                 drop.parent != drop2 &&
@@ -515,9 +512,9 @@ public class RainRenderer implements GLSurfaceView.Renderer {
         int width = (int) ((r * 2) * mScale);
         int height = (int) ((r * 2) * mScale * 1.5);
         Rect rect = new Rect(left, top, left + width, top + height);
-        Iterator<RainDrops.Drop> iterable = dropletsArray.iterator();
+        Iterator<Drop> iterable = dropletsArray.iterator();
         while (iterable.hasNext()) {
-            RainDrops.Drop drop = iterable.next();
+            Drop drop = iterable.next();
             if (rect.contains(drop.x, drop.y)) {
                 iterable.remove();
             }
@@ -532,7 +529,7 @@ public class RainRenderer implements GLSurfaceView.Renderer {
                 count++;
                 int r = randomWithPow3(minR, maxR);
                 if (canCreateDrop()) {
-                    RainDrops.Drop drop = new RainDrops.Drop();
+                    Drop drop = new Drop();
                     drop.x = random((int) (surfaceWidth));
                     drop.y = random((int) ((surfaceHeight) * spawnArea[0]), (int) ((surfaceHeight) * spawnArea[1]));
                     drop.r = r;

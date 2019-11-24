@@ -33,7 +33,6 @@ import java.nio.ShortBuffer;
 
 public class RainDropLayer {
 
-    private final Context mContext;
     private boolean isFirst = true;
     private int renderShadow = 0;
     private int renderShine = 0;
@@ -100,7 +99,6 @@ public class RainDropLayer {
         mWidth = width;
         mHeight = height;
 
-        mContext = context;
         vertexBuffer = ByteBuffer.allocateDirect(vertexsData.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
         vertexBuffer.put(vertexsData);
         vertexBuffer.position(0);
@@ -248,12 +246,8 @@ public class RainDropLayer {
 
 
         mPositionHandle = GLES20.glGetAttribLocation(mProgrammerHandle, "a_position");
-//        GLES20.glVertexAttribPointer(mPositionHandle, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer);
-//        GLES20.glEnableVertexAttribArray(mPositionHandle);
 //
         mTexCoordHandle = GLES20.glGetAttribLocation(mProgrammerHandle, "a_texCoord");
-//        GLES20.glVertexAttribPointer(mTexCoordHandle, 2, GLES20.GL_FLOAT, false, 0, textureBuffer);
-//        GLES20.glEnableVertexAttribArray(mTexCoordHandle);
 
         mGLCubeBuffer.position(0);
         GLES20.glVertexAttribPointer(mPositionHandle, 2, GLES20.GL_FLOAT, false, 0, mGLCubeBuffer);
@@ -298,10 +292,8 @@ public class RainDropLayer {
             mRainMapTextureHandle = fboId;
             isFirst = false;
         }
-//
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mRainMapTextureHandle);
-//        GLUtils.texSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, 0, bitmap);
         GLES20.glUniform1i(mTextureUniformHandleWaterMap, 0);
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1);

@@ -6,23 +6,25 @@ package com.qisejin.rain;
  * @author zhengliao
  */
 public class DropOption {
-//    minR:10,
-//    maxR:40,
-//    maxDrops:900,
-//    rainChance:0.3,
-//    rainLimit:3,
-//    dropletsRate:50,
-//    dropletsSize:[2,4],
-//    dropletsCleaningRadiusMultiplier:0.43,
-//    raining:true,
-//    globalTimeScale:1,
-//    trailRate:1,
-//    autoShrink:true,
-//    spawnArea:[-0.1,0.95],
-//    trailScaleRange:[0.2,0.5],
-//    collisionRadius:0.65,
-//    collisionRadiusIncrease:0.01,
-//    dropFallMultiplier:1,
-//    collisionBoostMultiplier:0.05,
-//    collisionBoost:1,
+    private int minR = 40;
+    private int maxR = 80;
+    private int maxDrops = 900;
+    private int maxDropletsCount = maxDrops * 3;
+    private float rainChance = 0.35f;
+    private int rainLimit = 6;
+    //1帧50个
+    private int dropletsRate = 50;
+    private float dropletsCleaningRadiusMultiplier = 0.56f;
+    private boolean raining = true;
+    private float globalTimeScale = 1f;
+    private int trailRate = 1;
+    private boolean autoShrink = true;
+    private float[] spawnArea = {-0.1f, 0.95f};
+    private float[] trailScaleRange = {0.2f, 0.5f};
+    private float collisionRadius = 0.65f;
+    private float collisionRadiusIncrease = 0.02f;
+    private float dropFallMultiplier = 2.0f;
+    private float collisionBoostMultiplier = 0.05f;
+    private int collisionBoost = 1;
+    private int dropletsCounter = 0;
 }
