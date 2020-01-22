@@ -35,7 +35,6 @@ public class RainRenderer implements GLSurfaceView.Renderer {
     private int dropletsRate = 50;
     private float dropletsCleaningRadiusMultiplier = 0.56f;
     private boolean raining = true;
-    private float globalTimeScale = 1f;
     private int trailRate = 1;
     private boolean autoShrink = true;
     private float[] spawnArea = {-0.1f, 0.95f};
@@ -45,7 +44,6 @@ public class RainRenderer implements GLSurfaceView.Renderer {
     private float dropFallMultiplier = 2.0f;
     private float collisionBoostMultiplier = 0.05f;
     private int collisionBoost = 1;
-    private int dropletsCounter = 0;
 
     protected Context mContext;
     protected GLSurfaceView glSurfaceView;
@@ -69,27 +67,22 @@ public class RainRenderer implements GLSurfaceView.Renderer {
     private int attributePointSize;
     private int uniformTexture;
     private int uniformTextureDropColor;
-    //    private int uniformMVPMatrix;
     protected FloatBuffer pointBuffer;
     protected FloatBuffer pointSizeBuffer;
 
-    private int defaultProgId;
-    private int mAttrDefaultPositionId;
-    private int mAttrDefaultTextureId;
-    private int mUniformTextureId;
-    private float mScale = 1.0f;
+
+    private long mLastRender = 0L;
 
     private ArrayList<Drop> drops = new ArrayList<>();
     private ArrayList<Drop> dropletsArray = new ArrayList<>();
     private ArrayList<Drop> trailDrops = new ArrayList<>();
 
     private void updateDroplets(float timeScale) {
-        int times = dropletsCounter;
         if (dropletsArray.size() < maxDropletsCount) {
-            int count = Math.min(times, maxDropletsCount - dropletsArray.size());
+            int count = Math.min((int) (dropletsRate * timeScale), maxDropletsCount - dropletsArray.size());
             for (int i = 0; i < count; i++) {
-                int x = random((int) (surfaceWidth * mScale));
-                int y = random((int) (surfaceHeight * mScale));
+                int x = random((int) (surfaceWidth));
+                int y = random((int) (surfaceHeight));
                 Drop drop = new Drop();
                 drop.x = x;
                 drop.y = y;
@@ -101,8 +94,6 @@ public class RainRenderer implements GLSurfaceView.Renderer {
 
 
     private void addBuffer() {
-//        Log.e("zhengliao", "size = " + dropletsArray.size());
-        Log.e("zhengliao", "drop size = " + drops.size());
         for (Drop drop : dropletsArray) {
             initScaleAndBlue(drop);
         }
@@ -124,8 +115,8 @@ public class RainRenderer implements GLSurfaceView.Renderer {
         d *= 1 / ((drop.spreadX + drop.spreadY) * 0.5 + 1);
         int df = (int) Math.floor(d * (254));
         float z = (float) (df / 255);
-        float width = ((r * 2 * scaleX * (spreadX + 1)) * 2) * mScale;
-        float height = ((r * 2 * scaleY * (spreadY + 1)) * 2) * mScale;
+        float width = ((r * 2 * scaleX * (spreadX + 1)) * 2);
+        float height = ((r * 2 * scaleY * (spreadY + 1)) * 2);
 
         pointSizeBuffer.put(width);
 
@@ -183,7 +174,7 @@ public class RainRenderer implements GLSurfaceView.Renderer {
 
     protected float[] projectionMatrix = new float[16];
 
-    private RainDropLayer mRainDropLayer;
+    private RainDropImageShader mRainDropImageShader;
 
     public RainRenderer(Context mContext, GLSurfaceView glSurfaceView) {
         this.mContext = mContext;
@@ -253,40 +244,33 @@ public class RainRenderer implements GLSurfaceView.Renderer {
         surfaceWidth = width;
         surfaceHeight = height;
         initTexturesAndFBO();
-        mRainDropLayer = new RainDropLayer(mContext, width, height, BitmapFactory.decodeResource(mContext.getResources(), R.drawable.texture_city));
-        mRainDropLayer.setAlphaMultiply(6);
-        mRainDropLayer.setAlphaSubtract(3);
-        mRainDropLayer.setParallaxFg(10);
-        mRainDropLayer.setBrightness(1.1f);
+        mRainDropImageShader = new RainDropImageShader(mContext, width, height, BitmapFactory.decodeResource(mContext.getResources(), R.drawable.texture_city));
+        mRainDropImageShader.setAlphaMultiply(6);
+        mRainDropImageShader.setAlphaSubtract(3);
+        mRainDropImageShader.setParallaxFg(10);
+        mRainDropImageShader.setBrightness(1.1f);
+        mRainDropImageShader.setRainMapTextureHandle(texturesId[0]);
     }
 
-    private long lastRender = 0L;
 
     @Override
     public void onDrawFrame(GL10 gl) {
         clearBuffer();
         long now = System.currentTimeMillis();
-        if (lastRender == 0L)
-            lastRender = now;
-        long delta = now - lastRender;
+        if (mLastRender == 0L)
+            mLastRender = now;
+        long delta = now - mLastRender;
         float timeScale = ((int) delta) / ((1f / 60f) * 1000f);
 
         if (timeScale > 1.0f)
             timeScale = 1.0f;
-        timeScale *= globalTimeScale;
-
-        lastRender = now;
+        mLastRender = now;
         updateDroplets(timeScale);
         updateDrops(timeScale);
         addBuffer();
         drawCircle();
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
-        GLES20.glViewport(0, 0, (int) surfaceWidth, (int) surfaceHeight);
-        GLES20.glClearColor(1f, 0f, 0f, 1f);
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-        GLES20.glEnable(GLES20.GL_BLEND);
-        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-        mRainDropLayer.draw(texturesId[0]);
+        mRainDropImageShader.draw(0, (int) surfaceWidth, (int) surfaceHeight);
     }
 
     protected void initShader() {
@@ -299,12 +283,6 @@ public class RainRenderer implements GLSurfaceView.Renderer {
 
         this.uniformTexture = GLES20.glGetUniformLocation(this.programPoint, "uTexturePoint");
         this.uniformTextureDropColor = GLES20.glGetUniformLocation(this.programPoint, "uTextureDropColor");
-
-
-        defaultProgId = OpenGLUtils.loadProgram(OpenGLUtils.readShaderFromRawResource(mContext, R.raw.custom_vertex), OpenGLUtils.readShaderFromRawResource(mContext, R.raw.frag_matrix));
-        mAttrDefaultPositionId = GLES20.glGetAttribLocation(defaultProgId, "position");
-        mAttrDefaultTextureId = GLES20.glGetAttribLocation(defaultProgId, "inputTextureCoordinate");
-        mUniformTextureId = GLES20.glGetUniformLocation(defaultProgId, "inputImageTexture");
     }
 
 
@@ -350,34 +328,7 @@ public class RainRenderer implements GLSurfaceView.Renderer {
         GLES20.glDisableVertexAttribArray(attribPosition);
     }
 
-
-    protected void drawDefaultProg() {
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fboIds[1]);
-        //关联
-        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0, GLES20.GL_TEXTURE_2D, texturesId[1], 0);
-        GLES20.glViewport(0, 0, (int) surfaceWidth, (int) surfaceHeight);
-        GLES20.glClearColor(0, 0, 0, 1);
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-        GLES20.glUseProgram(defaultProgId);
-        mGLCubeBuffer.position(0);
-        GLES20.glVertexAttribPointer(mAttrDefaultPositionId, 2, GLES20.GL_FLOAT, false, 0, mGLCubeBuffer);
-        GLES20.glEnableVertexAttribArray(mAttrDefaultPositionId);
-        mGLCoverTextureBuffer.position(0);
-        GLES20.glVertexAttribPointer(mAttrDefaultTextureId, 2, GLES20.GL_FLOAT, false, 0, mGLCoverTextureBuffer);
-        GLES20.glEnableVertexAttribArray(mAttrDefaultTextureId);
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texturesId[0]);
-        GLES20.glUniform1i(mUniformTextureId, 1);
-
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-        GLES20.glDisableVertexAttribArray(mAttrDefaultPositionId);
-        GLES20.glDisableVertexAttribArray(mAttrDefaultTextureId);
-    }
-
-
-    protected void initTexturesAndFBO() {
-        //生成空纹理
+    void initTexturesAndFBO() {
         texturesId[0] = OpenGLUtils.createEmptyTexture((int) surfaceWidth, (int) surfaceHeight);
         texturesId[1] = OpenGLUtils.createEmptyTexture((int) surfaceWidth, (int) surfaceHeight);
         GLES20.glGenFramebuffers(2, fboIds, 0);
@@ -392,21 +343,15 @@ public class RainRenderer implements GLSurfaceView.Renderer {
         for (int i = 0; i < drops.size(); i++) {
             Drop drop = drops.get(i);
             if (!drop.killed) {
-                // update gravity
-                // (chance of drops "creeping down")
                 if (chance((drop.r - (minR * dropFallMultiplier)) * (0.1f / getDeltaR()) * timeScale)) {
                     drop.momentum += random((drop.r / (float) maxR) * 4);
                 }
-                // clean small drops
                 if (autoShrink && drop.r <= minR && chance(0.05f * timeScale)) {
                     drop.shrink += 0.01f;
                 }
-                //update shrinkage
                 drop.r = drop.r - (int) (drop.shrink * timeScale);
-//                drop.r -= drop.shrink*timeScale;
                 if (drop.r <= 0)
                     drop.killed = true;
-                // update trails
                 if (raining) {
                     drop.lastSpawn += drop.momentum * timeScale * trailRate;
                     if (drop.lastSpawn > drop.nextSpawn) {
@@ -421,7 +366,6 @@ public class RainRenderer implements GLSurfaceView.Renderer {
 
                             trailDrops.add(trailDrop);
                             drop.r = (int) (drop.r * Math.pow(0.97, timeScale));
-//                            drop.r*=Math.pow(0.97,timeScale);
                             drop.lastSpawn = 0f;
                             drop.nextSpawn = random(minR, maxR) - (drop.momentum * 2 * trailRate) + (maxR - drop.r);
                         }
@@ -429,22 +373,18 @@ public class RainRenderer implements GLSurfaceView.Renderer {
 
                     }
                 }
-                //normalize spread
                 drop.spreadX = drop.spreadX * (float) Math.pow(0.4f, timeScale);
                 drop.spreadY = drop.spreadY * (float) Math.pow(0.7f, timeScale);
-                //update position
                 boolean moved = drop.momentum > 0;
                 if (moved && !drop.killed) {
-                    drop.y = (int) ((drop.y + (drop.momentum * globalTimeScale)));
-                    drop.x = drop.x + (int) (drop.momentumX * globalTimeScale);
+                    drop.y = (int) ((drop.y + drop.momentum));
+                    drop.x = drop.x + (int) (drop.momentumX);
                     if (drop.y > (surfaceHeight) + drop.r) {
                         drop.killed = true;
                     }
                 }
                 boolean checkCollision = (moved || drop.isNew) && !drop.killed;
                 drop.isNew = false;
-
-
                 if (checkCollision) {
                     int size = drops.size();
                     int start = i + 1;
@@ -464,7 +404,6 @@ public class RainRenderer implements GLSurfaceView.Renderer {
                             int dx = drop2.x - drop.x;
                             int dy = drop2.y - drop.y;
                             double d = Math.sqrt((dx * dx) + (dy * dy));
-                            //if it's within acceptable distance
                             if (d < (drop.r + drop2.r) * (collisionRadius + (drop.momentum * collisionRadiusIncrease * timeScale))) {
                                 double pi = Math.PI;
                                 int r1 = drop.r;
@@ -485,9 +424,6 @@ public class RainRenderer implements GLSurfaceView.Renderer {
                         }
                     }
                 }
-
-                //slowdown momentum
-//                drop.momentum -= Math.max(1, (minR * 0.5f) - drop.momentum) * 0.1f * timeScale;
                 if (drop.momentum < 0)
                     drop.momentum = 0;
                 drop.momentumX *= ((float) Math.pow(0.7, timeScale));
@@ -507,10 +443,10 @@ public class RainRenderer implements GLSurfaceView.Renderer {
     }
 
     private void clearDroplets(int x, int y, int r) {
-        int left = (int) ((x - r) * mScale);
-        int top = (int) ((y - r) * mScale);
-        int width = (int) ((r * 2) * mScale);
-        int height = (int) ((r * 2) * mScale * 1.5);
+        int left = x - r;
+        int top = y - r;
+        int width = r * 2;
+        int height = (int) ((r * 2) * 1.5);
         Rect rect = new Rect(left, top, left + width, top + height);
         Iterator<Drop> iterable = dropletsArray.iterator();
         while (iterable.hasNext()) {
@@ -523,9 +459,9 @@ public class RainRenderer implements GLSurfaceView.Renderer {
 
     private void updateRain(float timeScale) {
         if (raining) {
-            int limit = (int) (rainLimit * timeScale * getAreaMultiplier());
+            int limit = (int) (rainLimit * timeScale);
             int count = 0;
-            while (chance(rainChance * timeScale * getAreaMultiplier()) && count < limit) {
+            while (chance(rainChance * timeScale) && count < limit) {
                 count++;
                 int r = randomWithPow3(minR, maxR);
                 if (canCreateDrop()) {
@@ -542,17 +478,6 @@ public class RainRenderer implements GLSurfaceView.Renderer {
         }
     }
 
-    private float getArea() {
-        return surfaceWidth * surfaceHeight / mScale;
-    }
-
-
-    private float getAreaMultiplier() {
-//        return (float) Math.sqrt(getArea() / (1024 * 768));
-        return 1.0f;
-    }
-
-
     private boolean chance(float c) {
         return ((float) Math.random()) <= c;
     }
@@ -560,9 +485,4 @@ public class RainRenderer implements GLSurfaceView.Renderer {
     private boolean canCreateDrop() {
         return drops.size() < maxDrops;
     }
-
-    private boolean canCreateDroplets() {
-        return dropletsArray.size() < maxDropletsCount;
-    }
-
 }

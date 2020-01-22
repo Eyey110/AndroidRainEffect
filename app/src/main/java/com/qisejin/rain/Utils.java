@@ -74,4 +74,31 @@ public class Utils {
         return result + 1;
 //        return n;
     }
+
+
+
+    public static Bitmap cropCenter(int width, int height, Bitmap src) {
+        Bitmap dst;
+        float dstAspectRatio = width * 1f / height;
+        float srcAspectRatio = src.getWidth() * 1f / src.getHeight();
+        if (srcAspectRatio > dstAspectRatio) {
+            //src widther
+            float scale = height * 1f / src.getHeight();
+            int scaledWidth = (int) (src.getWidth() * scale);
+            Bitmap scaledBitmap = Bitmap.createScaledBitmap(src, scaledWidth, height, false);
+            int startX = (int) ((scaledWidth - width) / 2f);
+            dst = Bitmap.createBitmap(scaledBitmap, startX, 0, width, height);
+        } else {
+
+            float scale = width * 1f / src.getWidth();
+            int scaledHeight = (int) (src.getHeight() * scale);
+            Bitmap scaledBitmap = Bitmap.createScaledBitmap(src, width, scaledHeight, false);
+            int startY = (int) ((scaledHeight - height) / 2f);
+            dst = Bitmap.createBitmap(scaledBitmap, 0, startY, width, height);
+        }
+
+        return dst;
+
+    }
+
 }
